@@ -27,12 +27,14 @@ The format of the jobs file is simple. Each job is a single line with five space
 	# Aboriginal lands
 	1690009 public canvec_aboriginal canvec_aboriginal.sql true
 
-160009 -- the code for "Aboriginal Lands"
-public -- the default schema for postgresql tables.
-canvec_aboriginal -- the name of the PostGIS table.
-canvec_aboriginal.sql -- the name of the output file.
-true -- the value for compression (any other value means false). If true is entered, the sql file will be gzipped on the fly into a file called [sqlfile].gz.
+- 160009 -- the code for "Aboriginal Lands"
+- public -- the default schema for postgresql tables.
+- canvec_aboriginal -- the name of the PostGIS table.
+- canvec_aboriginal.sql -- the name of the output file.
+- true -- the value for compression (any other value means false). If true is entered, the sql file will be gzipped on the fly into a file called [sqlfile].gz.
 
 Blank lines and those beginning with # are ignored.
+
+This program is dependent on slf4j.
 
 * http://geogratis.cgdi.gc.ca/geogratis/en/product/search.do?id=5460AA9D-54CD-8349-C95E-1A4D03172FDF
