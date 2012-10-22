@@ -14,9 +14,11 @@ public class ExtractorJob {
 	private boolean compress;
 	private String name;
 	private Set<File> files;
+	private boolean deleteFilesOnComplete;
 	
 	public ExtractorJob(){
 		files = new HashSet<File>();
+		this.deleteFilesOnComplete = true;
 		this.name = "job_" + Long.toString(System.currentTimeMillis(), 16);
 	}
 	
@@ -28,6 +30,10 @@ public class ExtractorJob {
 		this.schemaName = schemaName;
 		this.tableName = tableName;
 		
+	}
+	
+	public void setDeleteFilesOnComplete(boolean deleteFilesOnComplete){
+		this.deleteFilesOnComplete = deleteFilesOnComplete;
 	}
 	
 	public void setTableName(String tableName){
@@ -99,6 +105,10 @@ public class ExtractorJob {
 				name != null && name.length() > 0 &&
 				schemaName != null && schemaName.length() > 0 &&
 				tableName != null && tableName.length() > 0;
+	}
+
+	public boolean isDeleteFilesOnComplete() {
+		return deleteFilesOnComplete;
 	}
 
 }

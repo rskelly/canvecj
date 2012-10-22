@@ -93,11 +93,19 @@ public class ExtractorWorker implements Runnable {
 						// Start a process for the command and get the input stream.
 						Process proc = Runtime.getRuntime().exec(command.toString());
 						InputStream in = proc.getInputStream();
+						boolean compress = job.isCompress();
+						
+						// Create output file.
+						String fileName = job.getOutFile();
+						if(compress)
+							fileName += ".gz";
+						File outFile = new File(fileName);
 						
 						// Create a file output, and GZIP it if necessary.
-						OutputStream out = new BufferedOutputStream(new FileOutputStream(new File(job.getOutFile() + ".gz")));
+						OutputStream out = new BufferedOutputStream(new FileOutputStream(outFile));
+
 						// If compression is desired, wrap the output in a gzip stream.
-						if(job.isCompress())
+						if(compress)
 							out = new GZIPOutputStream(out);
 						
 						//  Write the shp2pgsql output to the output stream.
@@ -107,7 +115,7 @@ public class ExtractorWorker implements Runnable {
 							out.write(buf, 0, read);
 						
 						// If gzipping, finish the archive.
-						if(job.isCompress())
+						if(compress)
 							((GZIPOutputStream) out).finish();
 						
 						// Close the streams.
@@ -119,7 +127,9 @@ public class ExtractorWorker implements Runnable {
 						if(retval != 0)
 							logger.warn("Return value from shp2pgsql was ", retval);
 						logger.debug("File complete", file.getName());
-					} catch (IOException | InterruptedException e) {
+					} catch (IOException e){
+						logger.error("Failed while processing job " + job.getName(), e);
+					} catch(InterruptedException e) {
 						logger.error("Failed while processing job " + job.getName(), e);
 					}
 					++i;

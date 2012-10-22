@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
  * @author Rob Skelly <rob@dijital.ca>
  *
  */
+// TODO: Make delete temp files configurable.
+// TODO: Make canvec dir configurable.
 public class Extractor {
 
 	private static Logger logger = LoggerFactory.getLogger(Extractor.class);
@@ -40,7 +42,7 @@ public class Extractor {
 	private static final String FILE_TABLE_CACHE_FILE = TEMP_DIR + "/canvec_extractor_file_table";
 	private static final String CANVEC_SOURCE_DIR = "./canvec";
 	
-	private String canvecSourceDir = CANVEC_SOURCE_DIR;
+	private String canvecDir = CANVEC_SOURCE_DIR;
 	private String tempDir = TEMP_DIR;
 	private List<ExtractorJob> jobs;
 	private int numWorkers;
@@ -58,8 +60,8 @@ public class Extractor {
 	 * The directory where canvec archives are stored.
 	 * @param canvecSourcePath
 	 */
-	public void setCanVecSourcePath(String canvecSourcePath){
-		this.canvecSourceDir = canvecSourcePath;
+	public void setCanvecDir(String canvecDir){
+		this.canvecDir = canvecDir;
 	}
 	
 	/**
@@ -112,10 +114,12 @@ public class Extractor {
 				Thread.sleep(500);
 			}
 			for(ExtractorJob job:jobs){
+				if(!job.isDeleteFilesOnComplete())
+					continue;
 				Set<File> files = job.getFiles();
 				for(File file:files){
 					try{
-						file.delete();
+						file.deleteOnExit();
 					}catch(Exception e){
 						logger.warn("Failed to delete file: ", file.getName(), " (may already be deleted).");
 					}
@@ -159,7 +163,15 @@ public class Extractor {
 		for(int i=0;i<numWorkers;++i)
 			workers.add(new ExtractorWorker());
 	}
-	
+
+	/**
+	 * Sets the number of workers to use.
+	 * @param numWorkers
+	 */
+	public void setNumWorkers(int numWorkers) {
+		this.numWorkers = numWorkers;
+	}
+
 	/**
 	 * Appends the files required for each job to the job objects.
 	 * @return
@@ -255,7 +267,7 @@ public class Extractor {
 			for(String line:getLines(cacheFile))
 				archives.add(new File(line));
 		}else{
-			archives = findArchives(new File(canvecSourceDir));
+			archives = findArchives(new File(canvecDir));
 			BufferedWriter out = new BufferedWriter(new FileWriter(cacheFile));
 			for(File file:archives)
 				out.write(file.getAbsolutePath() + "\n");
@@ -288,25 +300,37 @@ public class Extractor {
 	 * Parse the jobs file and construct a list of jobs.
 	 * @param jobsFile
 	 * @return
-	 * @throws IOException
+	 * @throws IOException 
+	 * @throws Exception 
 	 */
-	private static List<ExtractorJob> parseJobsFile(String jobsFile) throws IOException{
+	private static List<ExtractorJob> parseJobsFile(String jobsFile, Map<String, String> config) throws IOException {
 		List<ExtractorJob> jobs = new ArrayList<ExtractorJob>();
 		BufferedReader in = new BufferedReader(new FileReader(new File(jobsFile)));
 		String line = null;
 		while((line = in.readLine()) != null){
+			line = line.trim();
 			if(line.startsWith("#") || line.length() == 0)
 				continue;
-			String[] parts = line.split(" ");
-			if(parts.length < 5)
-				continue;
-			ExtractorJob job = new ExtractorJob();
-			job.setPattern(parts[0].trim());
-			job.setSchemaName(parts[1].trim());
-			job.setTableName(parts[2].trim());
-			job.setOutFile(parts[3].trim());
-			job.setCompress("true".equals(parts[4].trim().toLowerCase()));
-			jobs.add(job);
+			if(line.startsWith("@")){
+				String[] parts = line.split(" ");
+				String name = parts[0].substring(1).trim();
+				String value = parts[1].trim();
+				config.put(name, value);
+			}else{
+				String[] parts = line.split(" ");
+				if(parts.length < 6){
+					logger.warn("Each job configuration must have six properties:", line);
+					continue;
+				}
+				ExtractorJob job = new ExtractorJob();
+				job.setPattern(parts[0].trim());
+				job.setSchemaName(parts[1].trim());
+				job.setTableName(parts[2].trim());
+				job.setOutFile(parts[3].trim());
+				job.setCompress("true".equals(parts[4].trim().toLowerCase()));
+				job.setDeleteFilesOnComplete("true".equals(parts[5].trim().toLowerCase()));
+				jobs.add(job);
+			}
 		}
 		in.close();
 		return jobs;
@@ -314,10 +338,21 @@ public class Extractor {
 	
 	public static void main(String[] args) throws IOException{
 		String jobsFile = args[0];
-		List<ExtractorJob> jobs = parseJobsFile(jobsFile);
+		Map<String, String> config = new HashMap<String, String>();
+		List<ExtractorJob> jobs = parseJobsFile(jobsFile, config);
 		Extractor e = new Extractor();
+		for(String key:config.keySet()){
+			if("canvecDir".equals(key)){
+				e.setCanvecDir(config.get(key));
+			}else if("tempDir".equals(key)){
+				e.setTempDir(config.get(key));
+			}else if("numWorkers".equals(key)){
+				e.setNumWorkers(Integer.parseInt(config.get(key)));
+			}
+		}
 		for(ExtractorJob job:jobs)
 			e.addJob(job);
 		e.execute();
 	}
+
 }
