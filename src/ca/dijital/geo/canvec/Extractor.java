@@ -36,8 +36,8 @@ public class Extractor {
 
 	private static Logger logger = LoggerFactory.getLogger(Extractor.class);
 	
-	private static final String FILE_TABLE_CACHE_FILE = "/tmp/canvec_extractor_file_table";
 	private static final String TEMP_DIR = "/tmp";
+	private static final String FILE_TABLE_CACHE_FILE = TEMP_DIR + "/canvec_extractor_file_table";
 	private static final String CANVEC_SOURCE_DIR = "./canvec";
 	
 	private String canvecSourceDir = CANVEC_SOURCE_DIR;
@@ -313,7 +313,6 @@ public class Extractor {
 	}
 	
 	public static void main(String[] args) throws IOException{
-		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
 		String jobsFile = args[0];
 		List<ExtractorJob> jobs = parseJobsFile(jobsFile);
 		Extractor e = new Extractor();
