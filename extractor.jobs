@@ -1,0 +1,11 @@
+# pattern, schemaName, tableName, outFile, compress
+# - pattern is the feature id pattern to match
+# - schemaName is the database schema name. postgresql's default is "public"
+# - tableName is the name of the table to contain the data. THIS TABLE WILL BE DROPPED AND CREATED.
+# - outFile is the path of the file to create. if you choose compressed, ".gz" will be appended.
+# - compress. valid values are "true" and anything else, for false. if true, output will be compressed on-the-fly
+
+# The canvec feature catalogue is available here: http://ftp2.cits.rncan.gc.ca/pub/canvec/doc/CanVec_feature_catalogue_en.pdf
+
+# Aboriginal lands
+1690009 public canvec_aboriginal canvec_aboriginal.sql true
