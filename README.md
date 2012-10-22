@@ -35,6 +35,8 @@ The format of the jobs file is simple. Each job is a single line with five space
 
 Blank lines and those beginning with # are ignored.
 
-This program is dependent on slf4j.
+This program is dependent on slf4j. There is a binary in the root folder that contains the dependencies. Invoke it with the following command:
+
+	java -jar canvec_extractor.jar extractor.jobs
 
 * http://geogratis.cgdi.gc.ca/geogratis/en/product/search.do?id=5460AA9D-54CD-8349-C95E-1A4D03172FDF
