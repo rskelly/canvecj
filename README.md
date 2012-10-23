@@ -22,6 +22,10 @@ Here's the invocation:
 
 Where canvec_extractor.jar is the executable archive and extractor.jobs is the jobs file (there's a sample of the jobs file in this directory).
 
+NOTE: This program uses Runtime.exec to launch the shp2pgsql program. When it does this, Java forks, creating a new process with the same memory footprint as the original one, which may exceed the available memory on your machine. When this happens, you get an IOException ("Cannot allocate memory"). You can prevent this by declaring the size of the VM's heap on startup. Something like this should do it:
+
+	java -Xms64m -Xmx128m -jar canvec_extractor.jar extractor.jobs
+
 The format of the jobs file is simple. Each job is a single line with five space-separated values. For example:
 
 	# Aboriginal lands
