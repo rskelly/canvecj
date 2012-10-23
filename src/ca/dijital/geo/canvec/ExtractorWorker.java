@@ -116,8 +116,15 @@ public class ExtractorWorker implements Runnable {
 						//  Write the shp2pgsql output to the output stream.
 						byte[] buf = new byte[1024];
 						int read = 0;
-						while((read = in.read(buf)) > 0)
+						int accum = 0;
+						int maxAccum = 1024 * 1024;
+						while((read = in.read(buf)) > 0){
 							out.write(buf, 0, read);
+							// If we've accumulated more than 1M of data, flush it.
+							accum += read;
+							if(accum > maxAccum)
+								out.flush();
+						}
 						
 						// If gzipping, finish the archive.
 						if(compress)

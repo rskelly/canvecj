@@ -223,14 +223,16 @@ public class Extractor {
 	 * @throws IOException
 	 */
 	private void saveZipEntry(ZipFile archive, ZipEntry entry, File outFile) throws IOException{
-		InputStream zin = archive.getInputStream(entry);
-		OutputStream zout = new BufferedOutputStream(new FileOutputStream(outFile));
-		int read;
-		byte[] buf = new byte[4096];
-		while((read = zin.read(buf)) > 0)
-			zout.write(buf, 0, read);
-		zout.close();
-		zin.close();
+		if(!outFile.exists()){
+			InputStream zin = archive.getInputStream(entry);
+			OutputStream zout = new BufferedOutputStream(new FileOutputStream(outFile));
+			int read;
+			byte[] buf = new byte[4096];
+			while((read = zin.read(buf)) > 0)
+				zout.write(buf, 0, read);
+			zout.close();
+			zin.close();
+		}
 	}
 
 	/**
