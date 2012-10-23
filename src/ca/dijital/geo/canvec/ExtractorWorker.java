@@ -101,9 +101,9 @@ public class ExtractorWorker implements Runnable {
 					// Build shp2pgsql command.
 					StringBuffer command = new StringBuffer("shp2pgsql ");
 					if(i == 0){
-						command.append("-a ");
-					}else{
 						command.append("-d ");
+					}else{
+						command.append("-a ");
 					}
 					if(i == end)
 						command.append("-I ");
