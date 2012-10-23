@@ -26,6 +26,7 @@ public class ExtractorWorker implements Runnable {
 	private Thread  thread;
 	private ExtractorJob job;
 	private boolean running;
+	private boolean busy;
 	
 	/**
 	 * Starts the worker with the given job. If the worker is in use, an exception is thrown.
@@ -33,6 +34,7 @@ public class ExtractorWorker implements Runnable {
 	 */
 	public void start(final ExtractorJob job) throws Exception {
 		if(!running){
+			busy = true;
 			running = true;
 			this.job = job;
 			this.thread = new Thread(this);
@@ -52,6 +54,9 @@ public class ExtractorWorker implements Runnable {
 				thread.join();
 			} catch (InterruptedException e) {
 				logger.error("Error stopping worker.", e);
+			}finally{
+				job = null;
+				busy = false;
 			}
 		}
 	}
@@ -60,8 +65,8 @@ public class ExtractorWorker implements Runnable {
 	 * Returns true if the worker is running.
 	 * @return
 	 */
-	public boolean isRunning(){
-		return running;
+	public boolean isBusy(){
+		return busy;
 	}
 	
 	@Override
@@ -74,7 +79,7 @@ public class ExtractorWorker implements Runnable {
 			while(files.hasNext()){
 				File file = files.next();
 				if(file.getName().toLowerCase().endsWith("shp")){
-					logger.debug("Processing file ", file.getName());
+					logger.info("Processing file {}.", file.getName());
 					
 					// Build shp2pgsql command.
 					StringBuffer command = new StringBuffer("shp2pgsql ");
@@ -125,17 +130,18 @@ public class ExtractorWorker implements Runnable {
 						// Wait for the process to finish, and report any problems.
 						int retval = proc.waitFor();
 						if(retval != 0)
-							logger.warn("Return value from shp2pgsql was ", retval);
-						logger.debug("File complete", file.getName());
+							logger.warn("Return value from shp2pgsql was {}.", retval);
+						logger.info("File complete", file.getName());
 					} catch (IOException e){
-						logger.error("Failed while processing job " + job.getName(), e);
+						logger.error("Failed while processing job {}.", job.getName(), e);
 					} catch(InterruptedException e) {
-						logger.error("Failed while processing job " + job.getName(), e);
+						logger.error("Failed while processing job {}.", job.getName(), e);
 					}
 					++i;
 				}
 			}
 			running = false;
+			busy = false;
 		}
 	}
 

@@ -6,7 +6,7 @@
 # - compress -- valid values are "true" and anything else, for false. If true, output will be compressed on-the-fly.
 # - delete -- Valid values are "true" and anything else, for false. If true, will delete all temp files after processing is complete. 
 #
-# Program settings begin with an @, follwed by the property name, a space and the value, like so:
+# Program settings begin with an @, followed by the property name, a space and the value, like so:
 #
 # @canvecDir ./canvec
 #

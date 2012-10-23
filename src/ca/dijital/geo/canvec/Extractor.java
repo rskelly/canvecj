@@ -30,16 +30,13 @@ import org.slf4j.LoggerFactory;
  * configurable pattern matching strategy. 
  * 
  * @author Rob Skelly <rob@dijital.ca>
- *
  */
-// TODO: Make delete temp files configurable.
-// TODO: Make canvec dir configurable.
 public class Extractor {
 
 	private static Logger logger = LoggerFactory.getLogger(Extractor.class);
 	
 	private static final String TEMP_DIR = "/tmp";
-	private static final String FILE_TABLE_CACHE_FILE = TEMP_DIR + "/canvec_extractor_file_table";
+	private static final String FILE_TABLE_CACHE_FILE = "canvec_extractor_file_table.dat";
 	private static final String CANVEC_SOURCE_DIR = "./canvec";
 	
 	private String canvecDir = CANVEC_SOURCE_DIR;
@@ -57,7 +54,7 @@ public class Extractor {
 	}
 	
 	/**
-	 * The directory where canvec archives are stored.
+	 * The directory where CanVec archives are stored.
 	 * @param canvecSourcePath
 	 */
 	public void setCanvecDir(String canvecDir){
@@ -73,7 +70,7 @@ public class Extractor {
 	}
 	
 	/**
-	 * Add an ExtractorJob to the jobs.
+	 * Add an {@link ExtractorJob} to the jobs list.
 	 * @param job
 	 */
 	public void addJob(ExtractorJob job){
@@ -84,14 +81,14 @@ public class Extractor {
 	 * Starts the extractor.
 	 */
 	public void execute(){
-		logger.debug("Starting CanVec extractor...");
+		logger.info("Starting CanVec extractor...");
 		if(jobs.size() == 0){
 			logger.error("No jobs. Exiting.");
 			return;
 		}
 		for(ExtractorJob job:jobs){
 			if(!job.isValid()){
-				logger.error("Job ", job.getName(), " is invalid. Stopping.");
+				logger.error("Job {} is invalid. Stopping.", job.getName());
 				return;
 			}
 		}
@@ -100,7 +97,7 @@ public class Extractor {
 			initWorkers();
 			for(ExtractorJob job:jobs){
 				if(job.getFiles().size() == 0){
-					logger.warn("No files available for job with pattern: ", job.getPattern());
+					logger.warn("No files available for job with pattern: {}.", job.getPattern());
 				}else{
 					ExtractorWorker worker = null;
 					while((worker = getFreeWorker()) == null)
@@ -117,46 +114,41 @@ public class Extractor {
 				if(!job.isDeleteFilesOnComplete())
 					continue;
 				Set<File> files = job.getFiles();
-				for(File file:files){
-					try{
-						file.deleteOnExit();
-					}catch(Exception e){
-						logger.warn("Failed to delete file: ", file.getName(), " (may already be deleted).");
-					}
-				}
+				for(File file:files)
+					file.deleteOnExit();
 			}
 		}catch(Exception e){
 			logger.error("Failed to execute", e);
 		}
-		logger.debug("Done.");
+		logger.info("Done.");
 	}
 	
 	/**
-	 * Returns the first free worker.
+	 * Returns the first free {@link ExtractorWorker}.
 	 * @return
 	 */
 	private ExtractorWorker getFreeWorker(){
 		for(ExtractorWorker worker:workers){
-			if(!worker.isRunning())
+			if(!worker.isBusy())
 				return worker;
 		}
 		return null;
 	}
 	
 	/**
-	 * Returns true if there is at least one worker busy.
+	 * Returns true if there is at least one {@link ExtractorWorker} busy.
 	 * @return
 	 */
 	private boolean hasBusyWorker(){
 		for(ExtractorWorker worker:workers){
-			if(worker.isRunning())
+			if(worker.isBusy())
 				return true;
 		}
 		return false;
 	}
 	
 	/**
-	 * Initialize a collection of workers.
+	 * Initialize a collection of {@link ExtractorWorker}s.
 	 */
 	private void initWorkers(){
 		workers = new ArrayList<ExtractorWorker>();
@@ -165,7 +157,7 @@ public class Extractor {
 	}
 
 	/**
-	 * Sets the number of workers to use.
+	 * Sets the number of {@link ExtractorWorker}s to use.
 	 * @param numWorkers
 	 */
 	public void setNumWorkers(int numWorkers) {
@@ -173,8 +165,13 @@ public class Extractor {
 	}
 
 	/**
-	 * Appends the files required for each job to the job objects.
-	 * @return
+	 * Extracts the required files from the CanVec archives, and appends 
+	 * a {@link File} object to each {@link ExtractorJob}'s file list.
+	 * 
+	 * If a list of archives has been cached, the program will use the cached list,
+	 * otherwise, it will walk the directory recursively to catalogue the files
+	 * and build a new cache.
+	 * 
 	 * @throws IOException
 	 */
 	public void extractFiles() throws IOException{
@@ -219,7 +216,7 @@ public class Extractor {
 	}
 	
 	/**
-	 * Save a ZipEntry to a file.
+	 * Save a {@link ZipEntry} to a file.
 	 * @param archive
 	 * @param entry
 	 * @param outFile
@@ -237,7 +234,7 @@ public class Extractor {
 	}
 
 	/**
-	 * Returns the contents of a text file as a list of Strings.
+	 * Returns the contents of a text file as a list of {@link Strings}.
 	 * @param cacheFile
 	 * @return
 	 * @throws IOException
@@ -253,15 +250,16 @@ public class Extractor {
 	}
 
 	/**
-	 * Returns a list of File objects corresponding to zip files in the canvec folder.
-	 * If discardCache is false, attempts to read from a cached list of files.
+	 * Returns a list of {@link File}s corresponding to Zip files in the CanVec folder.
+	 * If {@code discardCache} is false, attempts to read from a cached list of files.
+	 * 
 	 * @param discardCache
 	 * @return
 	 * @throws IOException
 	 */
 	private List<File> getArchives(boolean discardCache) throws IOException{
 		List<File> archives = null;
-		File cacheFile = new File(FILE_TABLE_CACHE_FILE);
+		File cacheFile = new File(tempDir, FILE_TABLE_CACHE_FILE);
 		if(!discardCache && (cacheFile.exists() || cacheFile.canRead())){
 			archives = new ArrayList<File>();
 			for(String line:getLines(cacheFile))
@@ -277,7 +275,7 @@ public class Extractor {
 	}
 	
 	/**
-	 * Recursively searches a path for zip files.
+	 * Recursively searches a path for Zip files.
 	 * @param path
 	 * @return
 	 */
@@ -297,15 +295,15 @@ public class Extractor {
 	}
 	
 	/**
-	 * Parse the jobs file and construct a list of jobs.
+	 * Parse the jobs file and construct a list of {@link ExtractorJob}s.
 	 * @param jobsFile
 	 * @return
 	 * @throws IOException 
 	 * @throws Exception 
 	 */
-	private static List<ExtractorJob> parseJobsFile(String jobsFile, Map<String, String> config) throws IOException {
+	private static List<ExtractorJob> parseJobsFile(File jobsFile, Map<String, String> config) throws IOException {
 		List<ExtractorJob> jobs = new ArrayList<ExtractorJob>();
-		BufferedReader in = new BufferedReader(new FileReader(new File(jobsFile)));
+		BufferedReader in = new BufferedReader(new FileReader(jobsFile));
 		String line = null;
 		while((line = in.readLine()) != null){
 			line = line.trim();
@@ -319,7 +317,7 @@ public class Extractor {
 			}else{
 				String[] parts = line.split(" ");
 				if(parts.length < 6){
-					logger.warn("Each job configuration must have six properties:", line);
+					logger.warn("Each job configuration must have six properties: {}", line);
 					continue;
 				}
 				ExtractorJob job = new ExtractorJob();
@@ -336,23 +334,57 @@ public class Extractor {
 		return jobs;
 	}
 	
-	public static void main(String[] args) throws IOException{
-		String jobsFile = args[0];
+	/**
+	 * Runs the CanVec Extractor program. One parameter is expected: a path to
+	 * a jobs file.
+	 * 
+	 * @param args One argument is required: a path to a jobs file.
+	 * @throws IOException
+	 */
+	public static void main(String[] args) {
+		File jobsFile = null;
+		if(args.length > 0){
+			jobsFile = new File(args[0]);
+			if(!jobsFile.exists() || !jobsFile.canRead()){
+				logger.error("The given configuration file does not exist or cannot be read.");
+				System.exit(1);
+			}
+		}else{
+			logger.error("Usage: java -jar canvec_extractor.jar <configuration>");
+			System.exit(1);
+		}
 		Map<String, String> config = new HashMap<String, String>();
-		List<ExtractorJob> jobs = parseJobsFile(jobsFile, config);
-		Extractor e = new Extractor();
+		List<ExtractorJob> jobs = null;
+		try {
+			jobs = parseJobsFile(jobsFile, config);
+		} catch (IOException e) {
+			logger.error("Failed to parse jobs file.", e);
+			System.exit(1);
+		}
+		if(jobs == null || jobs.size() == 0){
+			logger.error("No jobs to process. Quitting.");
+			System.exit(0);
+		}
+		Extractor extractor = new Extractor();
 		for(String key:config.keySet()){
 			if("canvecDir".equals(key)){
-				e.setCanvecDir(config.get(key));
+				extractor.setCanvecDir(config.get(key));
 			}else if("tempDir".equals(key)){
-				e.setTempDir(config.get(key));
+				extractor.setTempDir(config.get(key));
 			}else if("numWorkers".equals(key)){
-				e.setNumWorkers(Integer.parseInt(config.get(key)));
+				try{
+					extractor.setNumWorkers(Integer.parseInt(config.get(key)));
+				}catch(Exception e){
+					logger.error("The value for numWorkers was invalid.", e);
+					System.exit(1);
+				}
+			}else{
+				logger.warn("An unknown program configuration was found: {}.", key);
 			}
 		}
 		for(ExtractorJob job:jobs)
-			e.addJob(job);
-		e.execute();
+			extractor.addJob(job);
+		extractor.execute();
 	}
 
 }
