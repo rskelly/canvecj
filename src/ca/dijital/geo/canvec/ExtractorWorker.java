@@ -91,8 +91,7 @@ public class ExtractorWorker implements Runnable {
 					if(i == end)
 						command.append("-I ");
 					command.append(file.getAbsolutePath()).append(" ");
-					command.append('"').append(job.getSchemaName()).append("\".\"")
-						.append(job.getTableName()).append("\" ");
+					command.append(job.getSchemaName()).append(".").append(job.getTableName());
 					
 					try {
 						// Start a process for the command and get the input stream.
@@ -117,8 +116,8 @@ public class ExtractorWorker implements Runnable {
 						byte[] buf = new byte[1024];
 						int read = 0;
 						int accum = 0;
-						int maxAccum = 1024 * 1024;
-						while((read = in.read(buf)) > 0){
+						int maxAccum = 1024 * 1024;	
+						while((read = in.read(buf)) > -1){
 							out.write(buf, 0, read);
 							// If we've accumulated more than 1M of data, flush it.
 							accum += read;
