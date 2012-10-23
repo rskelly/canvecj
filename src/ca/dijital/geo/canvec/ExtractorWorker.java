@@ -74,6 +74,23 @@ public class ExtractorWorker implements Runnable {
 		while(running){
 			Set<File> shapeFiles = job.getShapeFiles();
 			Iterator<File> files = shapeFiles.iterator();
+			boolean compress = job.isCompress();
+			// Create output file.
+			String fileName = job.getOutFile();
+			if(compress)
+				fileName += ".gz";
+			File outFile = new File(fileName);
+			OutputStream out = null;
+			try{
+				// Create a file output, and GZIP it if necessary.
+				out = new BufferedOutputStream(new FileOutputStream(outFile));
+				// If compression is desired, wrap the output in a gzip stream.
+				if(compress)
+					out = new GZIPOutputStream(out);
+			}catch(IOException e){
+				logger.error("Failed to open output file {} in job {}.", job.getOutFile(), job.getName(), e);
+				break;
+			}
 			int i=0;
 			int end = shapeFiles.size() - 1;
 			while(files.hasNext()){
@@ -97,21 +114,6 @@ public class ExtractorWorker implements Runnable {
 						// Start a process for the command and get the input stream.
 						Process proc = Runtime.getRuntime().exec(command.toString());
 						InputStream in = proc.getInputStream();
-						boolean compress = job.isCompress();
-						
-						// Create output file.
-						String fileName = job.getOutFile();
-						if(compress)
-							fileName += ".gz";
-						File outFile = new File(fileName);
-						
-						// Create a file output, and GZIP it if necessary.
-						OutputStream out = new BufferedOutputStream(new FileOutputStream(outFile));
-
-						// If compression is desired, wrap the output in a gzip stream.
-						if(compress)
-							out = new GZIPOutputStream(out);
-						
 						//  Write the shp2pgsql output to the output stream.
 						byte[] buf = new byte[1024];
 						int read = 0;
@@ -129,10 +131,8 @@ public class ExtractorWorker implements Runnable {
 						if(compress)
 							((GZIPOutputStream) out).finish();
 						
-						// Close the streams.
-						out.close();
 						in.close();
-						
+
 						// Wait for the process to finish, and report any problems.
 						int retval = proc.waitFor();
 						if(retval != 0)
@@ -145,6 +145,12 @@ public class ExtractorWorker implements Runnable {
 					}
 					++i;
 				}
+			}
+			try{
+				// Close the streams.
+				out.close();
+			}catch(IOException e){
+				logger.error("Failed to close outputstream in job {}.", job.getName());
 			}
 			running = false;
 			busy = false;
