@@ -13,12 +13,23 @@
 # Available program settings are @canvecDir, @tempDir and @numWorkers. 
 
 # Set some application properties.
-@canvecDir ./canvec
+@canvecDir ../../canvec
 @tempDir /tmp
 @numWorkers 2
 
 # Aboriginal lands
-1690009 public canvec_aboriginal canvec_aboriginal.sql true true
+# 1690009 public canvec_aboriginal canvec_aboriginal.sql true true
 
+# Petrochemical Pipelines
+1180009 public canvec_petro_pipelines canvec_petro_pipelines.sql true true
+
+# Mines
+1350049 public canvec_mines canvec_mines.sql true true
+
+# Mining Areas
+2600009 public canvec_mining_areas canvec_mining_areas.sql true true
+
+# Waterbodies (this is huge)
+# 1480009 public canvec_waterbodies canvec_waterbodies.sql true true
 
 # The canvec feature catalogue is available here: http://ftp2.cits.rncan.gc.ca/pub/canvec/doc/CanVec_feature_catalogue_en.pdf
