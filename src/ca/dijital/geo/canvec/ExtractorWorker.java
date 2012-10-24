@@ -27,7 +27,7 @@ public class ExtractorWorker implements Runnable {
 	private ExtractorJob job;
 	private boolean running;
 	private boolean busy;
-
+	private boolean failed;
 	private boolean useStdOut;
 	
 	/**
@@ -40,6 +40,7 @@ public class ExtractorWorker implements Runnable {
 		if(!running){
 			busy = true;
 			running = true;
+			failed = false;
 			this.useStdOut = useStdOut;
 			this.job = job;
 			this.thread = new Thread(this);
@@ -74,6 +75,14 @@ public class ExtractorWorker implements Runnable {
 		return busy;
 	}
 	
+	/**
+	 * Returns true if the job failed.
+	 * @return
+	 */
+	public boolean isFailure(){
+		return failed;
+	}
+	
 	@Override
 	public void run() {
 		while(running){
@@ -98,12 +107,13 @@ public class ExtractorWorker implements Runnable {
 						out = new GZIPOutputStream(out);
 				}catch(IOException e){
 					logger.error("Failed to open output file {} in job {}.", job.getOutFile(), job.getName(), e);
+					failed = true;
 					break;
 				}
 			}
 			int i=0;
 			int end = shapeFiles.size() - 1;
-			while(files.hasNext()){
+			while(running && files.hasNext()){
 				File file = files.next();
 				if(file.getName().toLowerCase().endsWith("shp")){
 					logger.info("Processing file {}.", file.getName());
@@ -129,7 +139,7 @@ public class ExtractorWorker implements Runnable {
 						int read = 0;
 						int accum = 0;
 						int maxAccum = 1024 * 1024;	
-						while((read = in.read(buf)) > -1){
+						while(running && (read = in.read(buf)) > -1){
 							out.write(buf, 0, read);
 							// If we've accumulated more than 1M of data, flush it.
 							accum += read;
@@ -146,8 +156,12 @@ public class ExtractorWorker implements Runnable {
 						logger.info("File complete", file.getName());
 					} catch (IOException e){
 						logger.error("Failed while processing job {}.", job.getName(), e);
+						failed = true;
+						break;
 					} catch(InterruptedException e) {
 						logger.error("Failed while processing job {}.", job.getName(), e);
+						failed = true;
+						break;
 					}
 					++i;
 				}
@@ -162,6 +176,7 @@ public class ExtractorWorker implements Runnable {
 					out.close();
 			}catch(IOException e){
 				logger.error("Failed to close outputstream in job {}.", job.getName());
+				failed = true;
 			}
 			running = false;
 			busy = false;

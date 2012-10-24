@@ -111,6 +111,11 @@ public class Extractor {
 					while((worker = getFreeWorker()) == null)
 						Thread.sleep(500);
 					worker.start(job, useStdOut);
+					if(worker.isFailure()){
+						logger.info("There was a failure in a worker. Shutting down...");
+						stopAllWorkers();
+						break;
+					}
 				}
 			}
 			while(true){
@@ -131,6 +136,14 @@ public class Extractor {
 		logger.info("Done.");
 	}
 	
+	/**
+	 * Stop all running workers.
+	 */
+	private void stopAllWorkers() {
+		for(ExtractorWorker worker:workers)
+			worker.stop();
+	}
+
 	/**
 	 * Returns the first free {@link ExtractorWorker}.
 	 * @return
