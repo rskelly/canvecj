@@ -35,12 +35,10 @@ public class Extractor {
 
 	private static Logger logger = LoggerFactory.getLogger(Extractor.class);
 	
-	private static final String TEMP_DIR = "/tmp";
 	private static final String FILE_TABLE_CACHE_FILE = "canvec_extractor_file_table.dat";
-	private static final String CANVEC_SOURCE_DIR = "./canvec";
 	
-	private String canvecDir = CANVEC_SOURCE_DIR;
-	private String tempDir = TEMP_DIR;
+	private String canvecDir;
+	private String tempDir;
 	private List<ExtractorJob> jobs;
 	private int numWorkers;
 	private List<ExtractorWorker> workers;
@@ -270,6 +268,10 @@ public class Extractor {
 	 * @throws IOException
 	 */
 	private List<File> getArchives(boolean discardCache) throws IOException{
+		if(tempDir == null)
+			throw new IOException("The temp dir has not been configured.");
+		if(canvecDir == null)
+			throw new IOException("The canvec dir has not been configured.");
 		List<File> archives = null;
 		File cacheFile = new File(tempDir, FILE_TABLE_CACHE_FILE);
 		if(!discardCache && (cacheFile.exists() || cacheFile.canRead())){
