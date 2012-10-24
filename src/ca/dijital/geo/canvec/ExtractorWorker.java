@@ -27,15 +27,20 @@ public class ExtractorWorker implements Runnable {
 	private ExtractorJob job;
 	private boolean running;
 	private boolean busy;
+
+	private boolean useStdOut;
 	
 	/**
 	 * Starts the worker with the given job. If the worker is in use, an exception is thrown.
+	 * If the stdOutParameter is true, outputs all SQL to STDOUT.
 	 * @param job
+	 * @param useStdOut 
 	 */
-	public void start(final ExtractorJob job) throws Exception {
+	public void start(final ExtractorJob job, boolean useStdOut) throws Exception {
 		if(!running){
 			busy = true;
 			running = true;
+			this.useStdOut = useStdOut;
 			this.job = job;
 			this.thread = new Thread(this);
 			this.thread.start();
@@ -81,15 +86,20 @@ public class ExtractorWorker implements Runnable {
 				fileName += ".gz";
 			File outFile = new File(fileName);
 			OutputStream out = null;
-			try{
-				// Create a file output, and GZIP it if necessary.
-				out = new BufferedOutputStream(new FileOutputStream(outFile));
-				// If compression is desired, wrap the output in a gzip stream.
-				if(compress)
-					out = new GZIPOutputStream(out);
-			}catch(IOException e){
-				logger.error("Failed to open output file {} in job {}.", job.getOutFile(), job.getName(), e);
-				break;
+			if(useStdOut){
+				// If useStdOut is set to true, we're going to dump everything into STDOUT.
+				out = System.out;
+			}else{
+				try{
+					// Create a file output, and GZIP it if necessary.
+					out = new BufferedOutputStream(new FileOutputStream(outFile));
+					// If compression is desired, wrap the output in a gzip stream.
+					if(compress)
+						out = new GZIPOutputStream(out);
+				}catch(IOException e){
+					logger.error("Failed to open output file {} in job {}.", job.getOutFile(), job.getName(), e);
+					break;
+				}
 			}
 			int i=0;
 			int end = shapeFiles.size() - 1;
@@ -144,11 +154,12 @@ public class ExtractorWorker implements Runnable {
 			}
 			try{
 				// If gzipping, finish the archive.
-				if(compress)
+				if(!useStdOut && compress)
 					((GZIPOutputStream) out).finish();
 				
 				// Close the stream.
-				out.close();
+				if(!useStdOut)
+					out.close();
 			}catch(IOException e){
 				logger.error("Failed to close outputstream in job {}.", job.getName());
 			}

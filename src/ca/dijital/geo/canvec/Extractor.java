@@ -78,9 +78,19 @@ public class Extractor {
 	}	
 	
 	/**
-	 * Starts the extractor.
+	 * Starts the extractor. If the useStdOut param is true, all output will
+	 * be streamed to STDOUT regardless of the settings in the jobs file. This
+	 * allows output to be piped directly into PostGIS, like so:
+	 * 
+	 * <pre>
+	 * java -jar canvec_extractor.jar extractor.jobs -|psql -d mydatabase
+	 * </p>
+	 * 
+	 * Keep in mind that this will DROP ALL EXISTING TABLES that have the same name, so be VERY CAREFUL!
+	 * 
+	 * @param useStdOut 
 	 */
-	public void execute(){
+	public void execute(boolean useStdOut){
 		logger.info("Starting CanVec extractor...");
 		if(jobs.size() == 0){
 			logger.error("No jobs. Exiting.");
@@ -102,7 +112,7 @@ public class Extractor {
 					ExtractorWorker worker = null;
 					while((worker = getFreeWorker()) == null)
 						Thread.sleep(500);
-					worker.start(job);
+					worker.start(job, useStdOut);
 				}
 			}
 			while(true){
@@ -344,17 +354,23 @@ public class Extractor {
 	 * @throws IOException
 	 */
 	public static void main(String[] args) {
-		File jobsFile = null;
-		if(args.length > 0){
-			jobsFile = new File(args[0]);
-			if(!jobsFile.exists() || !jobsFile.canRead()){
-				logger.error("The given configuration file does not exist or cannot be read.");
-				System.exit(1);
-			}
-		}else{
-			logger.error("Usage: java -jar canvec_extractor.jar <configuration>");
+		// If there are no args, just quit with a message.
+		if(args.length == 0){
+			logger.error("Usage: java -jar canvec_extractor.jar <configuration> [stdout]");
 			System.exit(1);
 		}
+		// Check the jobs file. Exit with a message if it's unreadable.
+		File jobsFile = new File(args[0]);
+		if(!jobsFile.exists() || !jobsFile.canRead()){
+			logger.error("The given configuration file does not exist or cannot be read.");
+			System.exit(1);
+		}
+		// If there's a second parameter, and it's "-", stream the output to stdout,
+		// regardless of the output files specified in the jobs file.
+		boolean useStdOut = false;
+		if(args.length > 1 && "-".equals(args[1].trim()))
+			useStdOut = true;
+		// Parse the jobs file; build the jobs list and config map.
 		Map<String, String> config = new HashMap<String, String>();
 		List<ExtractorJob> jobs = null;
 		try {
@@ -363,11 +379,14 @@ public class Extractor {
 			logger.error("Failed to parse jobs file.", e);
 			System.exit(1);
 		}
+		// If there are no jobs, just quit.
 		if(jobs == null || jobs.size() == 0){
 			logger.error("No jobs to process. Quitting.");
 			System.exit(0);
 		}
+		// Build and configure the extractor.
 		Extractor extractor = new Extractor();
+		// Set the global props from the jobs file.
 		for(String key:config.keySet()){
 			if("canvecDir".equals(key)){
 				extractor.setCanvecDir(config.get(key));
@@ -384,9 +403,10 @@ public class Extractor {
 				logger.warn("An unknown program configuration was found: {}.", key);
 			}
 		}
+		// Add the jobs.
 		for(ExtractorJob job:jobs)
 			extractor.addJob(job);
-		extractor.execute();
+		extractor.execute(useStdOut);
 	}
 
 }
