@@ -46,6 +46,14 @@ There are three application-wide settings, each of which is prefixed with an @:
 	@tempDir /tmp
 	@numWorkers 2
 
-This program is dependent on slf4j. There is a binary in the root folder that contains the dependencies.
+This is a Maven project. You can set it up to use eclipse by running 
+	
+	mvn eclipse:eclipse 
+	
+in the project root. Build from eclipse, or run 
 
-* http://geogratis.cgdi.gc.ca/geogratis/en/product/search.do?id=5460AA9D-54CD-8349-C95E-1A4D03172FDF
+mvn clean package 
+
+to compile it.
+
+*http://geogratis.cgdi.gc.ca/geogratis/en/product/search.do?id=5460AA9D-54CD-8349-C95E-1A4D03172FDF
