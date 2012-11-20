@@ -52,7 +52,7 @@ This is a Maven project. You can set it up to use eclipse by running
 	
 in the project root. Build from eclipse, or run 
 
-mvn clean package 
+	mvn clean package 
 
 to compile it.
 
