@@ -31,6 +31,8 @@ public class ExtractorWorker implements Runnable {
     private boolean failed;
     private boolean useStdOut;
 
+    private Extractor extractor;
+
     /**
      * Starts the worker with the given job. If the worker is in use, an
      * exception is thrown. If the stdOutParameter is true, outputs all SQL to
@@ -39,12 +41,13 @@ public class ExtractorWorker implements Runnable {
      * @param job
      * @param useStdOut
      */
-    public void start(final ExtractorJob job, boolean useStdOut)
+    public void start(final Extractor extractor, final ExtractorJob job, boolean useStdOut)
 	    throws Exception {
 	if (!running) {
 	    busy = true;
 	    running = true;
 	    failed = false;
+	    this.extractor = extractor;
 	    this.useStdOut = useStdOut;
 	    this.job = job;
 	    this.thread = new Thread(this);
@@ -101,25 +104,24 @@ public class ExtractorWorker implements Runnable {
 		fileName += ".gz";
 	    File outFile = new File(fileName);
 	    OutputStream out = null;
-	    if (useStdOut) {
-		// If useStdOut is set to true, we're going to dump everything
-		// into STDOUT.
-		out = System.out;
-	    } else {
-		try {
-		    // Create a file output, and GZIP it if necessary.
-		    out = new BufferedOutputStream(
-			    new FileOutputStream(outFile));
-		    // If compression is desired, wrap the output in a gzip
-		    // stream.
-		    if (compress)
-			out = new GZIPOutputStream(out);
-		} catch (IOException e) {
-		    logger.error("Failed to open output file {} in job {}.",
-			    job.getOutFile(), job.getName(), e);
-		    failed = true;
-		    break;
+	    try {
+		// If useStdOut is true, we'll need a temporary file.
+		if (useStdOut) {
+		    outFile = File.createTempFile("canvec_", ".tmp", new File(extractor.getTempDir()));
+		    compress = false;
+		    job.setTempFile(outFile);
 		}
+		// Create a file output, and GZIP it if necessary.
+		out = new BufferedOutputStream(new FileOutputStream(outFile));
+		// If compression is desired, wrap the output in a gzip
+		// stream.
+		if (compress)
+		    out = new GZIPOutputStream(out);
+	    } catch (IOException e) {
+		logger.error("Failed to open output file {} in job {}.",
+			job.getOutFile(), job.getName(), e);
+		failed = true;
+		break;
 	    }
 	    int i = 0;
 	    int end = shapeFiles.size() - 1;
@@ -190,16 +192,21 @@ public class ExtractorWorker implements Runnable {
 		    ((GZIPOutputStream) out).finish();
 
 		// Close the stream.
-		if (!useStdOut)
-		    out.close();
+		out.close();
 	    } catch (IOException e) {
 		logger.error("Failed to close outputstream in job {}.",
 			job.getName());
 		failed = true;
+	    } finally {
+		running = false;
+		busy = false;
+		extractor.workerFinished(this);
 	    }
-	    running = false;
-	    busy = false;
 	}
+    }
+
+    public ExtractorJob getJob() {
+	return job;
     }
 
 }

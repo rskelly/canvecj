@@ -20,6 +20,7 @@ public class ExtractorJob {
 	private boolean deleteFilesOnComplete;
 	private boolean compress;
 	private Set<File> files;
+	private File tempFile;
 
 	/**
 	 * Construct an {@link ExtractorJob}.
@@ -193,4 +194,18 @@ public class ExtractorJob {
 	public String toString() {
 		return "[ExtractorJob: pattern: " + pattern + "; table name: " + tableName + "; output file: " + outFile + "]";
 	}
+
+	/**
+	 * Sets the temp file for this job.
+	 * @param tempFile
+	 */
+	public void setTempFile(File tempFile) {
+	    this.tempFile = tempFile;
+	}
+	
+	public File getTempFile() {
+	    return tempFile;
+	}
+	
+	
 }
