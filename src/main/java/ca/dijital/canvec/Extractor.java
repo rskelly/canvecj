@@ -94,6 +94,7 @@ public class Extractor {
 			logger.error("No jobs. Exiting.");
 			return;
 		}
+		logger.info("Checking jobs...");
 		for(ExtractorJob job:jobs){
 			if(!job.isValid()){
 				logger.error("Job {} is invalid. Stopping.", job.getName());
@@ -198,6 +199,9 @@ public class Extractor {
 	public void extractFiles() throws IOException{
 		// Get the list of zip files.
 		List<File> archives = getArchives(false);
+
+		logger.info("Extracting " + archives.size() + " archives to " + tempDir + ".");
+
 		// A set to keep track of files that have already been extracted.
 		Set<String> extracted = new HashSet<String>();
 		// Cache for file objects.
@@ -205,6 +209,7 @@ public class Extractor {
 		// Iterate over the archives. If an entry in an archive matches one of
 		// our jobs' feature IDs, we'll unzip it.
 		for(File file:archives){
+			logger.info("Extracting " + file.getName() + ".");
 			ZipFile archive = new ZipFile(file);
 			Enumeration<? extends ZipEntry> entries = archive.entries();
 			while(entries.hasMoreElements()){
@@ -281,12 +286,17 @@ public class Extractor {
 	 * @throws IOException
 	 */
 	private List<File> getArchives(boolean discardCache) throws IOException{
+		logger.info("Enumerating archives (discarding cache: " + discardCache + ")");
 		if(tempDir == null)
 			throw new IOException("The temp dir has not been configured.");
 		if(canvecDir == null)
 			throw new IOException("The canvec dir has not been configured.");
 		List<File> archives = null;
-		File cacheFile = new File(tempDir, FILE_TABLE_CACHE_FILE);
+		// Create the cache file, then try to create its parent, if it doesn't exist.
+		File cacheDir = new File(tempDir);
+		if(!cacheDir.exists() && !cacheDir.mkdirs())
+			throw new IOException("The temporary directory, " + tempDir + ", does not exist and could not be created.");
+		File cacheFile = new File(cacheDir, FILE_TABLE_CACHE_FILE);
 		if(!discardCache && (cacheFile.exists() || cacheFile.canRead())){
 			archives = new ArrayList<File>();
 			for(String line:getLines(cacheFile))
@@ -355,6 +365,7 @@ public class Extractor {
 				job.setCompress("true".equals(parts[4].trim().toLowerCase()));
 				job.setDeleteFilesOnComplete("true".equals(parts[5].trim().toLowerCase()));
 				jobs.add(job);
+				logger.info("Loaded job: " + job.toString());
 			}
 		}
 		in.close();

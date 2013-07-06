@@ -187,4 +187,10 @@ public class ExtractorJob {
 				tableName != null && tableName.length() > 0;
 	}
 
+	/**
+	 * @Override
+	 */
+	public String toString() {
+		return "[ExtractorJob: pattern: " + pattern + "; table name: " + tableName + "; output file: " + outFile + "]";
+	}
 }
