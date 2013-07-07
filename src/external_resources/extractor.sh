@@ -13,9 +13,9 @@
 # the shp2pgsql program.
 
 JAVA_OPTS=-Xms64m -Xmx128m
-
 EXTRACTOR_JAR=canvec_extractor.jar
 EXTRACTOR_JOBS=extractor.jobs
+EXTRACTOR_LOGGING=-Djava.util.logging.config.file=logging.properties
 
-java $JAVA_OPTS -jar $EXTRACTOR_JAR $EXTRACTOR_JOBS -
+java $JAVA_OPTS -jar $EXTRACTOR_JAR $EXTRACTOR_JOBS $EXTRACTOR_LOGGING -
 

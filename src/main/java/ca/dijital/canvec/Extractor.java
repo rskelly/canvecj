@@ -46,12 +46,15 @@ public class Extractor {
     private List<ExtractorWorker> workers;
     private List<File> tempFiles;
 
-    private boolean useStdOut;
+    private boolean useStdOut = false;
+    private boolean deleteTempFiles = true;
+    private boolean compressOutput = false;
 
     /**
      * Construct a new Extractor.
      */
     public Extractor() {
+	tempDir = System.getProperty("java.io.tmpdir");
 	jobs = Collections.synchronizedList(new ArrayList<ExtractorJob>());
 	tempFiles = Collections.synchronizedList(new ArrayList<File>());
 	numWorkers = 5;
@@ -74,6 +77,26 @@ public class Extractor {
     public void setTempDir(String tempDir) {
 	this.tempDir = tempDir;
     }
+
+    /**
+     * If true, output will be compressed using gzip.
+     * 
+     * @param compressOutput
+     */
+    public void setCompressOutput(boolean compressOutput) {
+	this.compressOutput = compressOutput;
+    }
+
+    /**
+     * If true, temporary files will be deleted.
+     * 
+     * @param deleteTempFiles
+     */
+    public void setDeleteTempFiles(boolean deleteTempFiles) {
+	this.deleteTempFiles = deleteTempFiles;
+	
+    }
+
 
     /**
      * Set the temporary work directory. Archives will be extracted to here.
@@ -108,14 +131,11 @@ public class Extractor {
     void workerFinished(final ExtractorWorker worker) {
 	ExtractorJob job = worker.getJob();
 	File tempFile = job.getTempFile();
-	tempFiles.add(tempFile);
-	if (job.isDeleteFilesOnComplete()) {
-	    Set<File> files = job.getFiles();
-	    for (File file : files)
-		file.deleteOnExit();
-	}
+	if(tempFile != null)
+	    tempFiles.add(tempFile);
 	if (jobs.size() == 0)
 	    writeFinalOutput();
+	logger.info("Finished.");
     }
 
     /**
@@ -144,12 +164,12 @@ public class Extractor {
 		} catch (IOException e1) {
 		}
 		try {
-		    file.delete();
+		    if(deleteTempFiles)
+			file.deleteOnExit();
 		} catch (Exception e) {
 		}
 	    }
 	}
-	logger.info("Finished.");
     }
 
     /**
@@ -286,6 +306,8 @@ public class Extractor {
 			    fileCache.put(entryName, new File(tempDir,
 				    entryName));
 			File outFile = fileCache.get(entryName);
+			if(deleteTempFiles)
+			    outFile.deleteOnExit();
 			job.addFile(outFile);
 			// If it's already extracted skip it.
 			if (!extracted.contains(entryName)) {
@@ -362,10 +384,10 @@ public class Extractor {
 	List<File> archives = null;
 	// Create the cache file, then try to create its parent, if it doesn't
 	// exist.
-	File cacheDir = new File(tempDir);
+	File cacheDir = new File(tempDir, "canvec");
 	if (!cacheDir.exists() && !cacheDir.mkdirs())
 	    throw new IOException("The temporary directory, " + tempDir
-		    + ", does not exist and could not be created.");
+		    + "/canvec, does not exist and could not be created.");
 	File cacheFile = new File(cacheDir, FILE_TABLE_CACHE_FILE);
 	if (!discardCache && (cacheFile.exists() || cacheFile.canRead())) {
 	    archives = new ArrayList<File>();
@@ -426,7 +448,7 @@ public class Extractor {
 		config.put(name, value);
 	    } else {
 		String[] parts = line.split(" ");
-		if (parts.length < 6) {
+		if (parts.length < 4) {
 		    logger.warn(
 			    "Each job configuration must have six properties: {}",
 			    line);
@@ -437,9 +459,14 @@ public class Extractor {
 		job.setSchemaName(parts[1].trim());
 		job.setTableName(parts[2].trim());
 		job.setOutFile(parts[3].trim());
-		job.setCompress("true".equals(parts[4].trim().toLowerCase()));
-		job.setDeleteFilesOnComplete("true".equalsIgnoreCase(parts[5]
-			.trim()));
+		if(parts.length > 4) {
+		    try {
+			int srid = Integer.parseInt(parts[4].trim());
+			job.setSrid(srid);
+		    } catch (NumberFormatException e) {
+			logger.error("A value was given for the SRID, but it was invalid. Using the default.");
+		    }
+		}
 		jobs.add(job);
 		logger.info("Loaded job: " + job.toString());
 	    }
@@ -472,7 +499,7 @@ public class Extractor {
 	// stdout,
 	// regardless of the output files specified in the jobs file.
 	boolean useStdOut = false;
-	if (args.length > 1 && "-".equals(args[1].trim()))
+	if (args.length > 1 && "-".equals(args[1]))
 	    useStdOut = true;
 	// Parse the jobs file; build the jobs list and config map.
 	Map<String, String> config = new HashMap<String, String>();
@@ -503,6 +530,10 @@ public class Extractor {
 		    logger.error("The value for numWorkers was invalid.", e);
 		    System.exit(1);
 		}
+	    } else if("deleteTempFiles".equals(key)) {
+		extractor.setDeleteTempFiles("true".equals(config.get(key)));
+	    } else if("compress".equals(key)) {
+		extractor.setCompressOutput("true".equals(config.get(key)));
 	    } else {
 		logger.warn("An unknown program configuration was found: {}.",
 			key);
@@ -512,6 +543,14 @@ public class Extractor {
 	for (ExtractorJob job : jobs)
 	    extractor.addJob(job);
 	extractor.execute(useStdOut);
+    }
+
+    /**
+     * Returns true if output should be compressed.
+     * @return
+     */
+    public boolean isCompressOutput() {
+	return compressOutput;
     }
 
 }

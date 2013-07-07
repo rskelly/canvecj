@@ -41,8 +41,8 @@ public class ExtractorWorker implements Runnable {
      * @param job
      * @param useStdOut
      */
-    public void start(final Extractor extractor, final ExtractorJob job, boolean useStdOut)
-	    throws Exception {
+    public void start(final Extractor extractor, final ExtractorJob job,
+	    boolean useStdOut) throws Exception {
 	if (!running) {
 	    busy = true;
 	    running = true;
@@ -97,7 +97,7 @@ public class ExtractorWorker implements Runnable {
 	while (running) {
 	    Set<File> shapeFiles = job.getShapeFiles();
 	    Iterator<File> files = shapeFiles.iterator();
-	    boolean compress = job.isCompress();
+	    boolean compress = extractor.isCompressOutput();
 	    // Create output file.
 	    String fileName = job.getOutFile();
 	    if (compress)
@@ -107,14 +107,14 @@ public class ExtractorWorker implements Runnable {
 	    try {
 		// If useStdOut is true, we'll need a temporary file.
 		if (useStdOut) {
-		    outFile = File.createTempFile("canvec_", ".tmp", new File(extractor.getTempDir()));
+		    outFile = File.createTempFile("canvec_", ".tmp", new File(
+			    extractor.getTempDir()));
 		    compress = false;
 		    job.setTempFile(outFile);
 		}
 		// Create a file output, and GZIP it if necessary.
 		out = new BufferedOutputStream(new FileOutputStream(outFile));
-		// If compression is desired, wrap the output in a gzip
-		// stream.
+		// If compression is desired, wrap the output in a gzip stream.
 		if (compress)
 		    out = new GZIPOutputStream(out);
 	    } catch (IOException e) {
@@ -139,15 +139,23 @@ public class ExtractorWorker implements Runnable {
 		    }
 		    if (i == end)
 			command.append("-I ");
+		    // Set the SRID
+		    command.append("-s ").append(job.getSrid()).append(" ");
+		    // Set the ouput file name.
 		    command.append(file.getAbsolutePath()).append(" ");
+		    // Set the schema/table name.
 		    command.append(job.getSchemaName()).append(".")
 			    .append(job.getTableName());
 
+		    String commandStr = command.toString();
+		    
+		    logger.info("shp2pgsql command: " + commandStr);
+		    
 		    try {
 			// Start a process for the command and get the input
 			// stream.
 			Process proc = Runtime.getRuntime().exec(
-				command.toString());
+				commandStr);
 			InputStream in = proc.getInputStream();
 			// Write the shp2pgsql output to the output stream.
 			byte[] buf = new byte[1024];
@@ -162,15 +170,16 @@ public class ExtractorWorker implements Runnable {
 			    if (accum > maxAccum)
 				out.flush();
 			}
-
 			in.close();
 
 			// Wait for the process to finish, and report any
 			// problems.
 			int retval = proc.waitFor();
-			if (retval != 0)
-			    logger.warn("Return value from shp2pgsql was {}.",
-				    retval);
+			if (retval != 0) {
+			    String err = stringFromStream(proc.getErrorStream());
+			    logger.warn("Return value from shp2pgsql was {}; {}",
+				    retval, err);
+			}
 			logger.info("File complete", file.getName());
 		    } catch (IOException e) {
 			logger.error("Failed while processing job {}.",
@@ -205,8 +214,30 @@ public class ExtractorWorker implements Runnable {
 	}
     }
 
+    /**
+     * Returns the {@link ExtractorJob} being serviced by this worker.
+     * 
+     * @return
+     */
     public ExtractorJob getJob() {
 	return job;
     }
 
+    /**
+     * Reads a {@link String} from an {@link InputStream}.
+     * @param in
+     * @return
+     */
+    private String stringFromStream(InputStream in) {
+	StringBuffer str = new StringBuffer();
+	int read = 0;
+	byte[] buf = new byte[1024];
+	try {
+	    while((read = in.read(buf)) > -1) {
+	        str.append(new String(buf, 0, read));
+	    }
+	} catch (IOException e) {
+	}
+	return str.toString();
+    }
 }
