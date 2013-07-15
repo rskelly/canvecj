@@ -24,11 +24,15 @@
 #
 # @deleteTempFiles	If false, will prevent the temporary files from being deleted
 #					Useful for debugging. Defaults to true.
+# 
+# @charset			This is the character set that will be used with the -W parameter in 
+#					shp2pgsql. Defaults to LATIN1.
 #
 # Set some application properties.
 
 @canvecDir ../../canvec
 @numWorkers 4
+@charset LATIN1
 
 # Jobs
 
