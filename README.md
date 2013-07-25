@@ -29,22 +29,23 @@ NOTE: This program uses Runtime.exec to launch the shp2pgsql program. When it do
 The format of the jobs file is simple. Each job is a single line with five space-separated values. For example:
 
 	# Aboriginal lands
-	1690009 public canvec_aboriginal canvec_aboriginal.sql true true
+	1690009 public canvec_aboriginal canvec_aboriginal.sql.gz 3347
 
 - 160009 -- the code for "Aboriginal Lands"
 - public -- the default schema for postgresql tables.
 - canvec_aboriginal -- the name of the PostGIS table.
-- canvec_aboriginal.sql -- the name of the output file.
-- true -- the value for compression (any other value means false). If true is entered, the sql file will be gzipped on the fly into a file called [sqlfile].gz.
-- true -- if true, extracted files will be deleted when the program exits. If you might be running the program numerous times, set this to false.
+- canvec_aboriginal.sql.gz -- the name of the output file. If ".gz" is appended, it will be compressed. For raw text, leave the ".gz" off.
+- 3347 -- the SRID of the dataset. This will default to 4326, which is the native SRID of the canvec set, so it can be safely left off.
 
 Blank lines and those beginning with # are ignored.
 
-There are three application-wide settings, each of which is prefixed with an @:
+There are several application-wide settings, each of which is prefixed with an @:
 
-	@canvecDir ./canvec
-	@tempDir /tmp
-	@numWorkers 2
+	@canvecDir 			The directory where canvec archives are located. To only search a subset of the directories, name a sub-directory.
+	@tempDir 			The temporary directory where extracted archives will be stored. Defaults to the system temp directory.
+	@numWorkers			The number of workers or threads that will process the files.
+	@deleteTempFiles	If false, will prevent the temporary files from being deleted. Useful for debugging. Defaults to true.
+	@charset			This is the character set that will be used with the -W parameter in shp2pgsql. Defaults to LATIN1.
 
 This is a Maven project. You can set it up to use eclipse by running 
 	
