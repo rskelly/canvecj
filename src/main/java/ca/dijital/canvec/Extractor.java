@@ -49,8 +49,7 @@ public class Extractor {
 
     private boolean useStdOut = false;
     private boolean deleteTempFiles = true;
-    private boolean compressOutput = false;
-	private String charset = DEFAULT_CHARSET;
+    private String charset = DEFAULT_CHARSET;
 	
     /**
      * Construct a new Extractor.
@@ -78,15 +77,6 @@ public class Extractor {
      */
     public void setTempDir(String tempDir) {
 		this.tempDir = tempDir;
-    }
-
-    /**
-     * If true, output will be compressed using gzip.
-     * 
-     * @param compressOutput
-     */
-    public void setCompressOutput(boolean compressOutput) {
-		this.compressOutput = compressOutput;
     }
 
     /**
@@ -531,8 +521,6 @@ public class Extractor {
 				}
 			} else if("deleteTempFiles".equals(key)) {
 				extractor.setDeleteTempFiles("true".equals(config.get(key)));
-			} else if("compress".equals(key)) {
-				extractor.setCompressOutput("true".equals(config.get(key)));
 			} else if("charset".equals(key)) {
 				extractor.setCharset(config.get(key));
 			} else {
@@ -543,14 +531,6 @@ public class Extractor {
 		for (ExtractorJob job : jobs)
 			extractor.addJob(job);
 		extractor.execute(useStdOut);
-    }
-
-    /**
-     * Returns true if output should be compressed.
-     * @return
-     */
-    public boolean isCompressOutput() {
-		return compressOutput;
     }
 
 	public String getCharset() {

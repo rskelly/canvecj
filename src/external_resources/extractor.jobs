@@ -1,9 +1,12 @@
-# pattern, schemaName, tableName, outFile, compress, delete
+# Job settings are applied to each job.
+#
+# pattern, schemaName, tableName, outFile
 # - pattern -- The feature id pattern to match.
 # - schemaName -- The database schema name. PostgreSQL's default is "public". The schema will not be created automatically.
 # - tableName -- The name of the table to contain the data. THIS TABLE WILL BE DROPPED AND CREATED.
-# - outFile -- The path of the file to create. If you choose compressed, ".gz" will be appended.
+# - outFile -- The path of the file to create. If you append ".gz" to the filename, the file will be compressed.
 # - srid -- The SRID of the geometry. Default is 4326 (geographic).
+#
 #
 # Program settings begin with an @, followed by the property name, a space and the value, like so:
 #
