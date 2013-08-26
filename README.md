@@ -57,4 +57,4 @@ in the project root. Build from eclipse, or run
 
 to compile it.
 
-*http://geogratis.cgdi.gc.ca/geogratis/en/product/search.do?id=5460AA9D-54CD-8349-C95E-1A4D03172FDF
+*http://ftp2.cits.rncan.gc.ca/pub/canvec/doc/CanVec_feature_catalogue_en.html
