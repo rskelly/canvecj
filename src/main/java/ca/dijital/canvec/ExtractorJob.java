@@ -1,8 +1,6 @@
 package ca.dijital.canvec;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * {@link ExtractorJob} contains configuration for CanVec extraction tasks. A
@@ -19,16 +17,18 @@ public class ExtractorJob {
     private String pattern;
     private String outFile;
     private String name;
-    private Set<File> files;
     private File tempFile;
     private int srid;
 
+    private String databaseName;
+
+    private String tempDir;
+    
     /**
      * Construct an {@link ExtractorJob}.
      */
     public ExtractorJob() {
 	srid = DEFAULT_SRID;
-	files = new HashSet<File>();
 	this.name = "job_" + Long.toString(System.currentTimeMillis(), 16);
     }
 
@@ -66,43 +66,6 @@ public class ExtractorJob {
      */
     public String getSchemaName() {
 	return schemaName;
-    }
-
-    /**
-     * Get the list of files related to this job. The returned list is a copy.
-     * 
-     * @return
-     */
-    public Set<File> getFiles() {
-	Set<File> ret = new HashSet<File>();
-	ret.addAll(files);
-	return ret;
-    }
-
-    /**
-     * Get the list of shapefiles related to this job. The returned list is a
-     * copy.
-     * 
-     * @return
-     */
-    public Set<File> getShapeFiles() {
-	Set<File> shp = new HashSet<File>();
-	if (files != null) {
-	    for (File file : files) {
-		if (file.getName().toLowerCase().endsWith(".shp"))
-		    shp.add(file);
-	    }
-	}
-	return shp;
-    }
-
-    /**
-     * Add a file to this job.
-     * 
-     * @param file
-     */
-    public void addFile(File file) {
-	files.add(file);
     }
 
     /**
@@ -212,4 +175,41 @@ public class ExtractorJob {
 	return srid;
     }
 
+    public void setDatabaseName(String databaseName) {
+	this.databaseName = databaseName;
+    }
+    
+    public String getDatabaseName() {
+	return databaseName;
+    }
+
+    private static boolean isEmpty(String s) {
+	return s == null || s.length() == 0;
+    }
+    
+    public void validate() throws Exception {
+	if(isEmpty(databaseName))
+	    throw new Exception("Database name is required.");
+	if(isEmpty(pattern))
+	    throw new Exception("Pattern is required.");
+	if(isEmpty(outFile))
+	    throw new Exception("SQL file name is required.");
+	if(isEmpty(schemaName))
+	    throw new Exception("Schema name is required.");
+	if(isEmpty(tableName))
+	    throw new Exception("Table name is required.");
+	if(srid <= 0)
+	    throw new Exception("SRID is required.");
+	if(isEmpty(tempDir))
+	    throw new Exception("Target folder is required.");
+    }
+
+    public void setTempDir(String tempDir) {
+	this.tempDir = tempDir;
+    }
+    
+    public String getTempDir() {
+	return tempDir;
+    }
+    
 }

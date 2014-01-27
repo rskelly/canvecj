@@ -33,7 +33,12 @@
 #
 # Set some application properties.
 
-@canvecDir ../../canvec
+@storeClass ca.dijital.canvec.remote.AmazonS3CanvecStore
+@storeProperty key=AKIAILQSZENJSX62LLTA
+@storeProperty secret=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
+@storeProperty workDir=/tmp/canvec
+@storeProperty batchSize=10
+@tempDir /tmp/canvec/tmp
 @numWorkers 4
 @charset LATIN1
 

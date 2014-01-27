@@ -6,8 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import org.slf4j.Logger;
@@ -33,6 +32,8 @@ public class ExtractorWorker implements Runnable {
 
     private Extractor extractor;
 
+    private CanvecStore store;
+
     /**
      * Starts the worker with the given job. If the worker is in use, an
      * exception is thrown. If the stdOutParameter is true, outputs all SQL to
@@ -42,11 +43,12 @@ public class ExtractorWorker implements Runnable {
      * @param useStdOut
      */
     public void start(final Extractor extractor, final ExtractorJob job,
-	    boolean useStdOut) throws Exception {
+	    final CanvecStore store, boolean useStdOut) throws Exception {
 	if (!running) {
 	    busy = true;
 	    running = true;
 	    failed = false;
+	    this.store = store;
 	    this.extractor = extractor;
 	    this.useStdOut = useStdOut;
 	    this.job = job;
@@ -94,9 +96,29 @@ public class ExtractorWorker implements Runnable {
 
     @Override
     public void run() {
-	while (running) {
-	    Set<File> shapeFiles = job.getShapeFiles();
-	    Iterator<File> files = shapeFiles.iterator();
+	ArchiveIterator archives = null;
+	try {
+	    archives = store.getArchiveIterator();
+	} catch (IOException e) {
+	    logger.error("Failed to load archives: {}.", e.getMessage());
+	    return;
+	}
+	File tmpDir = new File(extractor.getTempDir());
+	tmpDir.mkdirs();
+	
+	while (running && archives.hasNext()) {
+	    Archive archive = archives.next();
+	    
+	    List<File> shapeFiles = null;
+	    try {
+		shapeFiles = archive.getShapeFiles(job.getPattern());
+		if(shapeFiles.size() == 0)
+		    continue;
+	    } catch (IOException e) {
+		logger.error("Failed to get shapefiles: {}.", e.getMessage());
+		continue;
+	    }
+	    
 	    boolean compress = false;
 	    String charset = extractor.getCharset();
 	    // Create output file.
@@ -108,8 +130,7 @@ public class ExtractorWorker implements Runnable {
 	    try {
 		// If useStdOut is true, we'll need a temporary file.
 		if (useStdOut) {
-		    outFile = File.createTempFile("canvec_", ".tmp", new File(
-			    extractor.getTempDir()));
+		    outFile = File.createTempFile("canvec_", ".tmp", tmpDir);
 		    compress = false;
 		    job.setTempFile(outFile);
 		}
@@ -124,12 +145,13 @@ public class ExtractorWorker implements Runnable {
 		failed = true;
 		break;
 	    }
+
 	    int i = 0;
 	    int end = shapeFiles.size() - 1;
-	    while (running && files.hasNext()) {
-		File file = files.next();
-		if (file.getName().toLowerCase().endsWith("shp")) {
-		    logger.info("Processing file {}.", file.getName());
+	    while (running && i < shapeFiles.size()) {
+		File shapeFile = shapeFiles.get(i);
+		if (shapeFile.getName().toLowerCase().endsWith(".shp")) {
+		    logger.info("Processing file {}.", shapeFile.getName());
 
 		    // Build shp2pgsql command.
 		    StringBuffer command = new StringBuffer("shp2pgsql ");
@@ -146,7 +168,7 @@ public class ExtractorWorker implements Runnable {
 		    // Set the SRID
 		    command.append("-s ").append(job.getSrid()).append(" ");
 		    // Set the ouput file name.
-		    command.append(file.getAbsolutePath()).append(" ");
+		    command.append(shapeFile.getAbsolutePath()).append(" ");
 		    // Set the schema/table name.
 		    command.append(job.getSchemaName()).append(".")
 			    .append(job.getTableName());
@@ -184,7 +206,8 @@ public class ExtractorWorker implements Runnable {
 				    "Return value from shp2pgsql was {}; {}",
 				    retval, err);
 			}
-			logger.info("File complete", file.getName());
+			logger.info("File complete", shapeFile.getName());
+
 		    } catch (IOException e) {
 			logger.error("Failed while processing job {}.",
 				job.getName(), e);
